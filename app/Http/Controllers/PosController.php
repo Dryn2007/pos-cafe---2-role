@@ -77,19 +77,53 @@ class PosController extends Controller
     // Proses Simpan Transaksi
     public function store(Request $request)
     {
-        $request->validate([ /* ... validasi lama ... */]);
+        $validated = $request->validate([
+            'cart' => ['required', 'array', 'min:1'],
+            'cart.*.id' => ['required', 'integer', 'exists:products,id'],
+            'cart.*.qty' => ['required', 'integer', 'min:1'],
+            'cart.*.price' => ['required', 'integer', 'min:0'],
+            'total_amount' => ['required', 'integer', 'min:0'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'payment_method' => ['required', 'in:qris,cash'],
+            'amount_paid' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        // Aturan pembayaran cash: amount_paid wajib dan harus >= total_amount
+        if ($validated['payment_method'] === 'cash') {
+            if (!isset($validated['amount_paid'])) {
+                return response()->json([
+                    'message' => 'Uang diterima wajib diisi untuk pembayaran cash.'
+                ], 422);
+            }
+
+            if ((int) $validated['amount_paid'] < (int) $validated['total_amount']) {
+                return response()->json([
+                    'message' => 'Uang diterima kurang.'
+                ], 422);
+            }
+        }
 
         try {
-            DB::transaction(function () use ($request) {
+            DB::transaction(function () use ($validated) {
                 // Buat Order
+                $changeAmount = null;
+                $amountPaid = null;
+                if ($validated['payment_method'] === 'cash') {
+                    $amountPaid = (int) $validated['amount_paid'];
+                    $changeAmount = $amountPaid - (int) $validated['total_amount'];
+                }
+
                 $order = Order::create([
                     'invoice_number' => 'INV-' . time(),
-                    'customer_name' => $request->customer_name ?? 'Guest',
-                    'total_price' => $request->total_amount,
-                    'status' => 'paid'
+                    'customer_name' => $validated['customer_name'] ?? 'Guest',
+                    'total_price' => (int) $validated['total_amount'],
+                    'status' => 'paid',
+                    'payment_method' => $validated['payment_method'],
+                    'amount_paid' => $amountPaid,
+                    'change_amount' => $changeAmount,
                 ]);
 
-                foreach ($request->cart as $item) {
+                foreach ($validated['cart'] as $item) {
                     // AMBIL DATA PRODUK ASLI DARI DB
                     $product = Product::lockForUpdate()->find($item['id']);
 

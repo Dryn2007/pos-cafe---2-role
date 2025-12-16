@@ -15,17 +15,23 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-// Kasir area (POS)
-Route::middleware(['auth', 'role:kasir'])->group(function () {
-    Route::get('/', [PosController::class, 'index'])->name('pos.index');
-    Route::post('/checkout', [PosController::class, 'store'])->name('pos.checkout');
-
+// Shared area (auth only)
+Route::middleware('auth')->group(function () {
     Route::get('/history', [PosController::class, 'history'])->name('orders.history');
     Route::get('/history/{id}', [PosController::class, 'historyDetail'])->name('orders.detail');
 });
 
+// Kasir area (POS)
+Route::middleware(['auth', 'role:kasir'])->group(function () {
+    Route::get('/', [PosController::class, 'index'])->name('pos.index');
+    Route::post('/checkout', [PosController::class, 'store'])->name('pos.checkout');
+});
+
 // Admin area
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/history', [PosController::class, 'history'])->name('orders.history');
+    Route::get('/history/{id}', [PosController::class, 'historyDetail'])->name('orders.detail');
+
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('/', [PosController::class, 'adminIndex'])->name('index');
         Route::post('/', [PosController::class, 'storeProduct'])->name('store');

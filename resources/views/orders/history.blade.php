@@ -60,13 +60,13 @@
                         </span>
                         Riwayat Transaksi
                     </h1>
-                    <a href="{{ route('pos.index') }}"
+                    <a href="{{ auth()->user()?->role === 'admin' ? route('admin.products.index') : route('pos.index') }}"
                         class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 mt-2 md:mt-3 font-medium transition-colors text-sm md:text-base">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
-                        Kembali ke Kasir
+                        Kembali
                     </a>
                 </div>
                 <div class="flex items-start sm:items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
@@ -444,7 +444,8 @@
                         }
                     });
 
-                    axios.get('/history/' + orderId)
+                    const basePath = window.location.pathname.startsWith('/admin') ? '/admin/history/' : '/history/';
+                    axios.get(basePath + orderId)
                         .then(response => {
                             const order = response.data;
                             const items = order.items;

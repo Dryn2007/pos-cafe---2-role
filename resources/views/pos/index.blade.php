@@ -99,7 +99,7 @@
                     <p class="text-gray-500 mt-1 text-sm md:text-base">Pilih menu favorit Anda</p>
                 </div>
                 <div class="flex items-center gap-2 md:gap-3 w-full sm:w-auto">
-                    <a href="{{ route('orders.history') }}"
+                    <a href="{{ auth()->user()?->role === 'admin' ? route('admin.orders.history') : route('orders.history') }}"
                         class="flex-1 sm:flex-none bg-white text-indigo-600 border-2 border-indigo-600 px-3 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl hover:bg-indigo-50 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 text-sm md:text-base">
                         <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -645,24 +645,29 @@
                     `;
 
                     Swal.fire({
-                        title: '<span style="font-size: 20px;">💳 Pembayaran QRIS</span>',
+                        title: '<span style="font-size: 20px;">💳 Pilih Metode Pembayaran</span>',
                         html: `
-                            <div style="text-align: center;">
-                                <div style="background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                            <div style="text-align: left;">
+                                <div style="background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%); padding: 15px; border-radius: 12px; margin-bottom: 12px; text-align:center;">
                                     <p style="color: #6b7280; font-size: 14px; margin-bottom: 5px;">Total Pembayaran</p>
                                     <p style="font-size: 28px; font-weight: bold; background: linear-gradient(90deg, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                                         Rp ${self.formatRupiah(self.totalPrice)}
                                     </p>
                                 </div>
-                                <div style="background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
-                                    ${qrCodeSvg}
-                                </div>
-                                <p style="color: #6b7280; font-size: 13px;">Scan dengan e-wallet atau mobile banking</p>
-                                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-                                    <span style="background: #f3f4f6; padding: 5px 12px; border-radius: 20px; font-size: 12px;">GoPay</span>
-                                    <span style="background: #f3f4f6; padding: 5px 12px; border-radius: 20px; font-size: 12px;">OVO</span>
-                                    <span style="background: #f3f4f6; padding: 5px 12px; border-radius: 20px; font-size: 12px;">DANA</span>
-                                    <span style="background: #f3f4f6; padding: 5px 12px; border-radius: 20px; font-size: 12px;">ShopeePay</span>
+
+                                <!-- QRIS disabled: hide selection so only CASH is available -->
+                                <input type="hidden" name="payment_method" value="cash">
+
+                                <!-- QRIS disabled: section removed -->
+
+                                <div id="cash_section" style="background: #fff; border: 2px solid #e5e7eb; border-radius: 12px; padding: 15px; margin-bottom: 10px;">
+                                    <label style="display:block; font-size: 13px; color:#6b7280; margin-bottom:6px;">Uang diterima</label>
+                                    <input id="amount_paid" type="number" min="0" placeholder="Contoh: 50000" style="width:100%; padding:10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; outline: none;" />
+                                    <div style="margin-top: 10px; display:flex; justify-content: space-between; font-size: 13px;">
+                                        <span style="color:#6b7280;">Kembalian</span>
+                                        <span id="change_amount" style="font-weight:700;">Rp 0</span>
+                                    </div>
+                                    <div id="cash_hint" style="margin-top:6px; font-size:12px; color:#ef4444; display:none;">Uang diterima kurang</div>
                                 </div>
                             </div>
                         `,
@@ -671,15 +676,46 @@
                         cancelButtonText: 'Batal',
                         confirmButtonColor: '#10b981',
                         cancelButtonColor: '#6b7280',
-                        width: 420
+                        width: 460,
+                        didOpen: () => {
+                            const total = self.totalPrice;
+                            const cashSection = document.getElementById('cash_section');
+                            const amountPaidInput = document.getElementById('amount_paid');
+                            const changeAmountEl = document.getElementById('change_amount');
+                            const cashHint = document.getElementById('cash_hint');
+
+                            const updateCash = () => {
+                                const amountPaid = parseInt(amountPaidInput.value || '0', 10);
+                                const change = amountPaid - total;
+                                changeAmountEl.textContent = 'Rp ' + self.formatRupiah(Math.max(change, 0));
+                                if (amountPaidInput.value !== '' && change < 0) {
+                                    cashHint.style.display = 'block';
+                                } else {
+                                    cashHint.style.display = 'none';
+                                }
+                            };
+
+                            amountPaidInput.addEventListener('input', updateCash);
+                        },
+                        preConfirm: () => {
+                            const method = 'cash';
+                            const amountPaid = parseInt(document.getElementById('amount_paid').value || '0', 10);
+                            if (!amountPaid || amountPaid < self.totalPrice) {
+                                Swal.showValidationMessage('Uang diterima harus diisi dan tidak boleh kurang dari total.');
+                                return false;
+                            }
+                            return { method, amountPaid };
+                        }
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            self.confirmPayment();
+                            const method = result.value?.method || 'qris';
+                            const amountPaid = result.value?.amountPaid ?? null;
+                            self.confirmPayment(method, amountPaid);
                         }
                     });
                 },
 
-                confirmPayment() {
+                confirmPayment(paymentMethod = 'qris', amountPaid = null) {
                     const self = this;
 
                     // Show loading
@@ -695,7 +731,9 @@
                     axios.post('/checkout', {
                         cart: this.cart,
                         total_amount: this.totalPrice,
-                        customer_name: 'Pelanggan'
+                        customer_name: 'Pelanggan',
+                        payment_method: paymentMethod,
+                        amount_paid: paymentMethod === 'cash' ? amountPaid : null,
                     })
                         .then(response => {
                             // Generate receipt data
@@ -715,7 +753,10 @@
                                 }),
                                 items: [...self.cart],
                                 subtotal: self.totalPrice,
-                                total: self.totalPrice
+                                total: self.totalPrice,
+                                paymentMethod: paymentMethod,
+                                amountPaid: paymentMethod === 'cash' ? amountPaid : null,
+                                changeAmount: paymentMethod === 'cash' ? (amountPaid - self.totalPrice) : null,
                             };
 
                             // Show receipt
@@ -787,9 +828,26 @@
                                         <span style="color: #6366f1;">Rp ${self.formatRupiah(self.receiptData.total)}</span>
                                     </div>
                                 </div>
+
+                                <div style="margin-bottom: 15px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fafafa;">
+                                    <div style="display:flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;">
+                                        <span style="color:#6b7280;">Metode</span>
+                                        <span style="font-weight:600; text-transform: uppercase;">${self.receiptData.paymentMethod || 'qris'}</span>
+                                    </div>
+                                    ${self.receiptData.paymentMethod === 'cash' ? `
+                                        <div style="display:flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;">
+                                            <span style="color:#6b7280;">Tunai</span>
+                                            <span style="font-weight:600;">Rp ${self.formatRupiah(self.receiptData.amountPaid || 0)}</span>
+                                        </div>
+                                        <div style="display:flex; justify-content: space-between; font-size: 13px;">
+                                            <span style="color:#6b7280;">Kembalian</span>
+                                            <span style="font-weight:700;">Rp ${self.formatRupiah(self.receiptData.changeAmount || 0)}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
                                 
                                 <div style="background: #d1fae5; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                                    <span style="color: #065f46; font-weight: 600;">✓ Pembayaran Berhasil via QRIS</span>
+                                    <span style="color: #065f46; font-weight: 600;">✓ Pembayaran Berhasil</span>
                                 </div>
                                 
                                 <div style="text-align: center; color: #9ca3af; font-size: 12px;">
@@ -883,8 +941,15 @@
                                 <div class="total-row"><span>Pajak (0%)</span><span>Rp 0</span></div>
                                 <div class="total-final"><span>TOTAL</span><span>Rp ${self.formatRupiah(self.receiptData.total)}</span></div>
                             </div>
+                            <div class="total-section" style="border-top: 2px dashed #ccc; padding-top: 12px;">
+                                <div class="total-row"><span>Metode</span><span style="text-transform: uppercase; font-weight: 600;">${self.receiptData.paymentMethod || 'qris'}</span></div>
+                                ${self.receiptData.paymentMethod === 'cash' ? `
+                                    <div class="total-row"><span>Tunai</span><span>Rp ${self.formatRupiah(self.receiptData.amountPaid || 0)}</span></div>
+                                    <div class="total-row"><span>Kembalian</span><span>Rp ${self.formatRupiah(self.receiptData.changeAmount || 0)}</span></div>
+                                ` : ''}
+                            </div>
                             <div class="success">
-                                <p>✓ Pembayaran Berhasil via QRIS</p>
+                                <p>✓ Pembayaran Berhasil</p>
                             </div>
                             <div class="footer">
                                 <p>================================</p>

@@ -27,6 +27,14 @@ class RoleAccessTest extends TestCase
         $this->actingAs($kasir)
             ->get('/admin/products')
             ->assertForbidden();
+
+        $this->actingAs($kasir)
+            ->get('/history')
+            ->assertOk();
+
+        $this->actingAs($kasir)
+            ->get('/admin/history')
+            ->assertForbidden();
     }
 
     public function test_admin_can_access_admin_products_but_cannot_access_pos(): void
@@ -40,5 +48,13 @@ class RoleAccessTest extends TestCase
         $this->actingAs($admin)
             ->get('/')
             ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->get('/history')
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->get('/admin/history')
+            ->assertOk();
     }
 }
