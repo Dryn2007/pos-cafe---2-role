@@ -69,9 +69,23 @@
                         Kembali ke Kasir
                     </a>
                 </div>
-                <div class="text-left sm:text-right">
-                    <p class="text-xs md:text-sm text-gray-500">Total Transaksi</p>
-                    <p class="text-xl md:text-2xl font-bold text-indigo-600" x-text="filteredOrders.length"></p>
+                <div class="flex items-start sm:items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <div class="text-left sm:text-right">
+                        <p class="text-xs md:text-sm text-gray-500">Total Transaksi</p>
+                        <p class="text-xl md:text-2xl font-bold text-indigo-600" x-text="filteredOrders.length"></p>
+                    </div>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit"
+                            class="bg-white text-red-600 border-2 border-red-600 px-3 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl hover:bg-red-50 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 text-sm md:text-base">
+                            <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                            </svg>
+                            Logout
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

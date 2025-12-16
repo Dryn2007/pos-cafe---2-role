@@ -60,13 +60,13 @@
                         </span>
                         Manajemen Produk
                     </h1>
-                    <a href="{{ route('pos.index') }}"
+                    <a href="{{ route('admin.products.index') }}"
                         class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 mt-2 md:mt-3 font-medium transition-colors text-sm md:text-base">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
-                        Kembali ke Kasir
+                        Kembali
                     </a>
                 </div>
                 <div class="flex items-center gap-2 md:gap-3 w-full sm:w-auto">
@@ -79,6 +79,19 @@
                         </svg>
                         <span class="hidden sm:inline">Riwayat</span>
                     </a>
+
+                    <form method="POST" action="{{ route('logout') }}" class="flex-1 sm:flex-none">
+                        @csrf
+                        <button type="submit"
+                            class="w-full bg-white text-red-600 border-2 border-red-600 px-3 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl hover:bg-red-50 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 text-sm md:text-base">
+                            <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+                            </svg>
+                            <span class="hidden sm:inline">Logout</span>
+                        </button>
+                    </form>
+
                     <button @click="openModal('create')"
                         class="flex-1 sm:flex-none bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 text-sm md:text-base">
                         <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -539,7 +552,7 @@
                             // Create and submit form
                             const form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = '/products/' + productId;
+                            form.action = '/admin/products/' + productId;
 
                             const csrfInput = document.createElement('input');
                             csrfInput.type = 'hidden';
@@ -564,10 +577,10 @@
                     this.isOpen = true;
 
                     if (mode === 'create') {
-                        this.formAction = "{{ route('products.store') }}";
+                        this.formAction = "{{ route('admin.products.store') }}";
                         this.form = { name: '', price: '', stock: '', category: 'drink' };
                     } else {
-                        this.formAction = "/products/" + product.id;
+                        this.formAction = "/admin/products/" + product.id;
                         this.form = {
                             name: product.name,
                             price: product.price,

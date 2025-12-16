@@ -2,23 +2,34 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PosController;
+use App\Http\Controllers\AuthController;
 
-// Halaman Utama Kasir
-Route::get('/', [PosController::class, 'index'])->name('pos.index');
-Route::post('/checkout', [PosController::class, 'store']);
+// Auth (login only; no register)
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
 
-// History Transaksi
-Route::get('/history', [PosController::class, 'history'])->name('orders.history');
-Route::get('/history/{id}', [PosController::class, 'historyDetail'])->name('orders.detail');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->name('register.store');
+});
 
-// Group Khusus Manajemen Produk
-Route::prefix('products')->name('products.')->group(function () {
-    // Halaman List Produk (Tabel Admin)
-    Route::get('/', [PosController::class, 'adminIndex'])->name('index');
-    // Simpan Baru
-    Route::post('/', [PosController::class, 'storeProduct'])->name('store');
-    // Update (Edit)
-    Route::put('/{id}', [PosController::class, 'updateProduct'])->name('update');
-    // Hapus
-    Route::delete('/{id}', [PosController::class, 'destroyProduct'])->name('destroy');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Kasir area (POS)
+Route::middleware(['auth', 'role:kasir'])->group(function () {
+    Route::get('/', [PosController::class, 'index'])->name('pos.index');
+    Route::post('/checkout', [PosController::class, 'store'])->name('pos.checkout');
+
+    Route::get('/history', [PosController::class, 'history'])->name('orders.history');
+    Route::get('/history/{id}', [PosController::class, 'historyDetail'])->name('orders.detail');
+});
+
+// Admin area
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
+    Route::prefix('products')->name('products.')->group(function () {
+        Route::get('/', [PosController::class, 'adminIndex'])->name('index');
+        Route::post('/', [PosController::class, 'storeProduct'])->name('store');
+        Route::put('/{id}', [PosController::class, 'updateProduct'])->name('update');
+        Route::delete('/{id}', [PosController::class, 'destroyProduct'])->name('destroy');
+    });
 });
