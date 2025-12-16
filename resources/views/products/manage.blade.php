@@ -549,25 +549,75 @@
                         cancelButtonText: 'Batal'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Create and submit form
-                            const form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = '/admin/products/' + productId;
+                            Swal.fire({
+                                title: 'Menghapus...'
+                                , allowOutsideClick: false
+                                , didOpen: () => Swal.showLoading()
+                            });
 
-                            const csrfInput = document.createElement('input');
-                            csrfInput.type = 'hidden';
-                            csrfInput.name = '_token';
-                            csrfInput.value = '{{ csrf_token() }}';
-                            form.appendChild(csrfInput);
+                            const deleteUrl = '{{ url('/admin/products') }}/' + productId;
 
-                            const methodInput = document.createElement('input');
-                            methodInput.type = 'hidden';
-                            methodInput.name = '_method';
-                            methodInput.value = 'DELETE';
-                            form.appendChild(methodInput);
+                            const doDelete = () => fetch(deleteUrl, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                }
+                            });
 
-                            document.body.appendChild(form);
-                            form.submit();
+                            const doDeleteFallback = () => fetch(deleteUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: '_method=DELETE'
+                            });
+
+                            const handleResponse = async (res) => {
+                                // Laravel destroy usually redirects back (302) with HTML; fetch will follow redirect.
+                                // Treat any 2xx as success, regardless of response type.
+                                if (res.ok) {
+                                    return true;
+                                }
+
+                                // Some shared hosts / middlewares reject DELETE; fallback to POST + _method
+                                if (res.status === 405) {
+                                    const fallbackRes = await doDeleteFallback();
+                                    if (fallbackRes.ok) return true;
+                                }
+
+                                // Try to read JSON error message, otherwise fallback
+                                let message = 'Gagal menghapus produk.';
+                                try {
+                                    const data = await res.clone().json();
+                                    message = data?.message || message;
+                                } catch (e) {
+                                    // ignore
+                                }
+                                throw new Error(message);
+                            };
+
+                            doDelete()
+                                .then(handleResponse)
+                                .then(async () => {
+                                    await Swal.fire({
+                                        icon: 'success',
+                                        title: 'Berhasil!',
+                                        text: 'Produk berhasil dihapus.',
+                                        confirmButtonColor: '#6366f1'
+                                    });
+                                    window.location.reload();
+                                })
+                                .catch((err) => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Gagal Hapus!',
+                                        text: err?.message || 'Terjadi kesalahan.',
+                                        confirmButtonColor: '#6366f1'
+                                    });
+                                });
                         }
                     });
                 },

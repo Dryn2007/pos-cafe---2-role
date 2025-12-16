@@ -196,7 +196,10 @@
                                 Item</th>
                             <th class="p-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Total
                                 Harga</th>
-                            <th class="p-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status
+                            <th class="p-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Metode
+                            </th>
+                            <th class="p-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"></th>
+                            Status
                             </th>
                             <th class="p-5 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Aksi
                             </th>
@@ -227,6 +230,23 @@
                                 <td class="p-5">
                                     <span class="font-bold text-gray-800">Rp <span
                                             x-text="formatRupiah(order.total_price)"></span></span>
+                                </td>
+                                <td class="p-5">
+                                    <div class="flex flex-col gap-1">
+                                        <span
+                                            class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-xs font-bold inline-flex items-center gap-1 w-fit"
+                                            x-text="(order.payment_method || 'qris').toUpperCase()"></span>
+                                        <template x-if="(order.payment_method || 'qris') === 'cash'">
+                                            <div class="text-xs text-gray-600 leading-snug">
+                                                <div>Tunai: <span class="font-semibold">Rp <span
+                                                            x-text="formatRupiah(order.amount_paid || 0)"></span></span>
+                                                </div>
+                                                <div>Kembalian: <span class="font-semibold">Rp <span
+                                                            x-text="formatRupiah(order.change_amount || 0)"></span></span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
                                 </td>
                                 <td class="p-5">
                                     <span
@@ -301,6 +321,20 @@
                             <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[10px] font-bold"
                                 x-text="getTotalItems(order) + ' item'"></span>
                         </div>
+                    </div>
+
+                    <!-- Payment Method (Mobile) -->
+                    <div class="flex items-start justify-between text-xs text-gray-600 mb-3">
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full text-[10px] font-bold"
+                            x-text="(order.payment_method || 'qris').toUpperCase()"></span>
+                        <template x-if="(order.payment_method || 'qris') === 'cash'">
+                            <div class="text-right leading-snug">
+                                <div>Tunai: <span class="font-semibold">Rp <span
+                                            x-text="formatRupiah(order.amount_paid || 0)"></span></span></div>
+                                <div>Kembalian: <span class="font-semibold">Rp <span
+                                            x-text="formatRupiah(order.change_amount || 0)"></span></span></div>
+                            </div>
+                        </template>
                     </div>
 
                     <!-- Total & Action -->
@@ -493,9 +527,26 @@
                                                 <span style="color: #6366f1;">Rp ${this.formatRupiah(order.total_price)}</span>
                                             </div>
                                         </div>
+
+                                        <div style="border-top: 2px dashed #e0e0e0; margin-top: 12px; padding-top: 12px;">
+                                            <div style="display:flex; justify-content: space-between; margin-bottom: 6px; color: #666;">
+                                                <span>Metode</span>
+                                                <span style="font-weight: 700; text-transform: uppercase;">${(order.payment_method || 'qris')}</span>
+                                            </div>
+                                            ${(order.payment_method || 'qris') === 'cash' ? `
+                                                <div style="display:flex; justify-content: space-between; margin-bottom: 6px; color: #666;">
+                                                    <span>Tunai</span>
+                                                    <span style="font-weight: 600;">Rp ${this.formatRupiah(order.amount_paid || 0)}</span>
+                                                </div>
+                                                <div style="display:flex; justify-content: space-between; color: #666;">
+                                                    <span>Kembalian</span>
+                                                    <span style="font-weight: 700;">Rp ${this.formatRupiah(order.change_amount || 0)}</span>
+                                                </div>
+                                            ` : ''}
+                                        </div>
                                         
                                         <div style="background: #d1fae5; padding: 10px; border-radius: 8px; margin-top: 15px; text-align: center;">
-                                            <span style="color: #065f46; font-weight: 600;">✓ Pembayaran Berhasil via QRIS</span>
+                                            <span style="color: #065f46; font-weight: 600;">✓ Pembayaran Berhasil</span>
                                         </div>
                                     </div>
                                 `,
